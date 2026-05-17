@@ -10,6 +10,7 @@ $config = [
     'aliases' => [
         '@bower' => '@vendor/bower-asset',
         '@npm'   => '@vendor/npm-asset',
+        '@components' => '@app/components',
     ],
     'components' => [
         'request' => [
@@ -52,6 +53,7 @@ $config = [
         */
     ],
     'params' => $params,
+    'defaultRoute'=>'site/index',
 ];
 
 if (YII_ENV_DEV) {
