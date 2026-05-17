@@ -70,6 +70,33 @@ class FuzzyLogic{
             }
             $results = [];
             $diseases = Diasease::find()->all();
-            
+
+            foreach ($diseases as $disease){
+                $requiredSymptomCodes = $disease -> getRequireSymptomCodes();
+                $matchedSymtoms = array_intersect($selectedSymptomCodes, $requiredSymptomCodes);
+                $matchCount = count($matchedSymtoms);
+                $requiredCount = count($requiredSymptomCodes);
+                
+                if ($matchCount > 0){
+                    $fuzzValue == self::defuzzification($selectedSymptomCodes, $requiredSymptomCodes);
+                    $matchPercentage = $fuzzValue * 100;
+
+                    if ($matchPercentage < 10 && $matchCount > 0 ){
+                        $matchPercentage = ($matchCount / $requiredCount) * 50;
+                    }
+                    $results[]= [
+                        'disease' => $disease,
+                    'match_percentage' => round(min($matchPercentage, 100), 2),
+                    'severity_category' => Disease::getSeverityCategory($matchPercentage),
+                    'matched_symptoms' => $matchedSymptoms,
+                    'matched_count' => $matchCount,
+                    'required_count' => $requiredCount,
+                    ];
+                }
+            }
+            ussort($results, function($a, $b){
+                return $b['$matchPercentage'] <=> $a['$matchPercentage'];
+            });
+            return $results;
     }
 }
