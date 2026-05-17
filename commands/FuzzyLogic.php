@@ -38,4 +38,38 @@ class FuzzyLogic{
         return 0;
     }
     //defuzzifikasi metode sugeno
+    public static function defuzzification($selectedSymptoms, $requiredSymptomCodes){
+        $nominator = 0;
+        $deminator = 0;
+
+        foreach ($requiredSymptomCodes as $symptomCode){
+            if(isset($selectedSymptoms[$symptomCode])){
+                $symptom = $selectedSymptoms[$symptomCode];
+                $fuzzValue = self::fuzzification(
+                    floatval($symptom->weight),
+                    floatval($symptom->min_value),
+                    floatval($symptom->max_value)
+                );
+            }
+            $nominator += $fuzzValue * floatval($symptom->weight);
+            $deminator += $fuzzValue;
+        }
+        if ($deminator == 0 ) return 0;
+    return $nominator / $deminator;
+    }
+    public static function diagnose($selectedSymptomCodes){
+            $allSymptoms = Symptoms::find()-indexBy('code')->all();
+            $selectedSymptomCodes = [];
+            foreach ($selectedSymptomCodes as $code){
+                if(isset($allSymptoms[$code])){
+                    $selectedSymptomCodes[$code] = $allSymptoms[$code];
+                }
+            }
+            if(empty($selectedSymptoms)){
+                return [];
+            }
+            $results = [];
+            $diseases = Diasease::find()->all();
+            
+    }
 }
