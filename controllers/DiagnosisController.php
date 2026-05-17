@@ -2,16 +2,23 @@
 namespace app\controllers;
 
 use Yii;
-use yii\web\controller;
+use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
-use yii\models\Symptom;
-use yii\models\Disease;
-use yii\models\DiagnosisHistory;
-use yii\commands\FuzzyLogic;
+use app\models\Symptom;
+use app\models\Disease;
+use app\models\DiagnosisHistory;
+use app\components\FuzzyLogic;
 use yii\base\DynamicModel;
 
 class DiagnosisController extends Controller{
+    public function beforeAction($action)
+    {
+        if ($action->id == 'process') {
+            $this->enableCsrfValidation = false;
+        }
+        return parent::beforeAction($action);
+    }
     public function behavior(){
         return [
             'verbs' => [
@@ -24,28 +31,28 @@ class DiagnosisController extends Controller{
         ];
     }
     public function actionIndex(){
-        Yii::app->session->remove('diagnosis_results');
-        Yii::app->session->remove('selected_symptoms');
+        Yii::$app->session->remove('diagnosis_results');
+        Yii::$app->session->remove('selected_symptoms');
 
         $model = new DynamicModel(['patient_name', 'patient_age']);
         $model->addRule(['patient_name', 'patient_age'], 'required');
-        $model-addRule(['patient_age'], 'integer', ['min' => 0, 'max' => 120]);
+        $model->addRule(['patient_age'], 'integer', ['min' => 0, 'max' => 120]);
 
-        if ($model->load(Yii::$app->request->post())&& model->validate()){
-            Yii::app->session->set('patient_name', $model->patient_name);
-            Yii::app->session->set('patient_age', $model->patient_name);
-            return $this->redirect(['select_symptoms']);
+        if ($model->load(Yii::$app->request->post())&& $model->validate()){
+            Yii::$app->session->set('patient_name', $model->patient_name);
+            Yii::$app->session->set('patient_age', $model->patient_age);
+            return $this->redirect(['select-symptoms']);
         }
         return $this->render('index',['model'=>$model,
         ]);
     }
     public function actionSelectSymptoms(){
-        $patient_name = Yii::app->session->get('patient_name');
+        $patient_name = Yii::$app->session->get('patient_name');
         if(!$patient_name){
             return $this->redirect(['index']);
         }
         $symptomsGrouped = Symptom::getGroupedByCategory();
-        return $this->render('select_symptoms', [
+        return $this->render('select-symptoms', [
             'symptomsGrouped'=> $symptomsGrouped,
             'patientName'=> $patient_name,
         ]);
@@ -133,5 +140,24 @@ class DiagnosisController extends Controller{
         Yii::$app->session->remove('patient_age');
 
         return $this->redirect(['index']);
+    }
+    public function actionDeleteAll(){
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+
+        try{
+            $deleted = DiagnosisHistory::deleteAll();
+            return [
+                'succes' => true,
+                'message' => "berhasil menghapus $deleted riwayat diagnosis",
+            ];
+        }catch(\Exception $e){
+            return [
+                'succes' => false,
+                'message' => "gagal menghapus: " . $e->getMessage()
+            ];
+        }
+    }
+    public function actionTest(){
+        return "test berhasil";
     }
 }
