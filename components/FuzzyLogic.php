@@ -4,6 +4,7 @@ namespace app\components;
 use app\models\Rule;
 use app\models\Disease;
 use app\models\Symptom;
+use yii\helpers\VarDumper;
 
 class FuzzyLogic{
     //sugeno metode
@@ -18,7 +19,7 @@ class FuzzyLogic{
             if ($weight <= $c) return ($c - $weight) / ($c - $b);
             return 0;
         }elseif($weight >= 0.3 && $weight <=0.7){
-             $b = 0.5;
+            $b = 0.5;
             $a = 0.3;
             $c = 0.7;
             
@@ -27,7 +28,7 @@ class FuzzyLogic{
             if ($weight <= $c) return ($c - $weight) / ($c - $b);
             return 0;
         }elseif($weight >= 0.6 && $weight <= 1.0){
-             $b = 0.8;
+            $b = 0.8;
             $a = 0.6;
             $c = 1.0;
             
@@ -51,9 +52,10 @@ class FuzzyLogic{
                     floatval($symptom->min_value),
                     floatval($symptom->max_value)
                 );
-            }
-            $nominator += $fuzzValue * floatval($symptom->weight);
+                $nominator += $fuzzValue * floatval($symptom->weight);
             $denominator += $fuzzValue;
+            }
+            
         }
         if ($denominator == 0 ) return 0;
     return $nominator / $denominator;
@@ -66,7 +68,7 @@ class FuzzyLogic{
                     $selectedSymptom[$code] = $allSymptoms[$code];
                 }
             }
-            if(empty($selectedSymptoms)){
+            if(empty($selectedSymptom)){
                 return [];
             }
             $results = [];
@@ -74,12 +76,15 @@ class FuzzyLogic{
 
             foreach ($diseases as $disease){
                 $requiredSymptomCodes = $disease -> getRequiredSymptomCodes();
+                
                 $matchedSymptoms = array_intersect($selectedSymptomCodes, $requiredSymptomCodes);
+                
                 $matchCount = count($matchedSymptoms);
                 $requiredCount = count($requiredSymptomCodes);
                 
                 if ($matchCount > 0){
-                    $fuzzValue = self::defuzzification($selectedSymptomCodes, $requiredSymptomCodes);
+                    // $fuzzValue = self::defuzzification($selectedSymptomCodes, $requiredSymptomCodes);
+                    $fuzzValue = self::defuzzification($selectedSymptom, $requiredSymptomCodes);
                     $matchPercentage = $fuzzValue * 100;
 
                     if ($matchPercentage < 10 && $matchCount > 0 ){
@@ -96,8 +101,8 @@ class FuzzyLogic{
                 }
             }
             usort($results, function($a, $b){
-                return $b['matchPercentage'] <=> $a['matchPercentage'];
-            });
+    return $b['match_percentage'] <=> $a['match_percentage'];
+});
             return $results;
     }
 }
