@@ -4,22 +4,38 @@ namespace app\controllers;
 use Yii;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
+use yii\web\Response;
 use yii\filters\VerbFilter;
 use app\models\Symptom;
 use app\models\Disease;
+use app\models\Rule;
 use app\models\DiagnosisHistory;
 use app\components\FuzzyLogic;
 use yii\base\DynamicModel;
+use yii\helpers\VarDumper;
 
 class DiagnosisController extends Controller{
-    public function beforeAction($action)
-    {
+    public function actionDebug(){
+    Yii::$app->response->format = Response::FORMAT_JSON;
+    
+    $symptoms = Symptom::find()->count();
+    $diseases = Disease::find()->count();
+    $rules = Rule::find()->count();
+    
+    return [
+        'total_symptoms' => $symptoms,
+        'total_diseases' => $diseases,
+        'total_rules' => $rules,
+        'message' => 'Database OK' . ($rules == 0 ? ' TAPI RULE KOSONG!' : '')
+    ];
+    }
+    public function beforeAction($action){
         if ($action->id == 'process') {
             $this->enableCsrfValidation = false;
         }
         return parent::beforeAction($action);
     }
-    public function behavior(){
+    public function behaviors(){
         return [
             'verbs' => [
                 'class' => VerbFilter::className(),
@@ -61,6 +77,8 @@ class DiagnosisController extends Controller{
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
         $selectedSymptoms = Yii::$app->request->post('symptoms', []);
         
+
+        
         if (empty($selectedSymptoms)) {
             return [
                 'success' => false,
@@ -75,16 +93,16 @@ class DiagnosisController extends Controller{
                 'message' => 'Tidak ada penyakit yang cocok dengan gejala yang dipilih'
             ];
         }
-        Yii::$app->session->set('diagnosis_result', $results);
+        Yii::$app->session->set('diagnosis_results', $results);
         Yii::$app->session->set('selected_symptoms', $selectedSymptoms);
         return [
-            'succes'=> true,
-            'redirec' => Yii::$app->urlManager->createUrl(['diagnosis/result'])
+            'success'=> true,
+            'redirect' => Yii::$app->urlManager->createUrl(['diagnosis/result'])
         ];
     }
-    public function actionResults(){
+    public function actionResult(){
         $results = Yii::$app->session->get('diagnosis_results');
-        $selectedSymptoms = Yii::$app->session->get('selected_sympstoms');
+        $selectedSymptoms = Yii::$app->session->get('selected_symptoms');
         $patientName = Yii::$app->session->get('patient_name');
         $patientAge = Yii::$app->session->get('patient_age');
 
@@ -95,7 +113,7 @@ class DiagnosisController extends Controller{
             ->where(['in', 'code', $selectedSymptoms])
             ->all();
         if(!empty($results)){
-            $topresult = $results[0];
+            $topResult = $results[0];
             $history = new DiagnosisHistory();
             $history->patient_name = $patientName;
             $history->patient_age = $patientAge;
@@ -133,8 +151,31 @@ class DiagnosisController extends Controller{
             'symptoms'=>$symptoms,
         ]);
     }
+    public function actionTestRules(){
+    header('Content-Type: application/json');
+   
+    $diseases = Disease::find()->all();
+    $result = [];
+    
+    foreach ($diseases as $disease) {
+        $symptoms = Rule::find()
+            ->where(['disease_id' => $disease->id])
+            ->select('symptom_code')
+            ->column();
+        
+        $result[] = [
+            'code' => $disease->code,
+            'name' => $disease->name,
+            'required_symptoms' => $symptoms,
+            'total_symptoms' => count($symptoms)
+        ];
+    }
+    
+    echo json_encode($result, JSON_PRETTY_PRINT);
+    exit;
+    }
     public function actionReset(){
-        Yii::$app->session->remove('diagnosis_result');
+        Yii::$app->session->remove('diagnosis_results');
         Yii::$app->session->remove('selected_symptoms');
         Yii::$app->session->remove('patient_name');
         Yii::$app->session->remove('patient_age');
@@ -147,17 +188,14 @@ class DiagnosisController extends Controller{
         try{
             $deleted = DiagnosisHistory::deleteAll();
             return [
-                'succes' => true,
+                'success' => true,
                 'message' => "berhasil menghapus $deleted riwayat diagnosis",
             ];
         }catch(\Exception $e){
             return [
-                'succes' => false,
+                'success' => false,
                 'message' => "gagal menghapus: " . $e->getMessage()
             ];
         }
-    }
-    public function actionTest(){
-        return "test berhasil";
     }
 }
