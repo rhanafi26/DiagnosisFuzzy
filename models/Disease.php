@@ -6,7 +6,7 @@ class Disease extends ActiveRecord{
     public static function tableName(){
         return 'disease';
     }
-    public static function rules(){
+    public function rules(){
         return [
             [['code', 'name'], 'required'],
             [['code'], 'string', 'max' => 5],
@@ -15,7 +15,7 @@ class Disease extends ActiveRecord{
             [['code'], 'unique'],
         ];
     }
-    public static function attributeLabels(){
+    public function attributeLabels(){
         return [
             'id' => 'ID',
             'code' => 'Kode Penyakit',
@@ -31,7 +31,7 @@ class Disease extends ActiveRecord{
         return $this->hasMany(Symptom::class, ['code' => 'symptom_code'])
             ->viaTable('rule', ['disease_id' => 'id']);
     }
-    public function getRequiredSymptomsCodes(){
+    public function getRequiredSymptomCodes(){
         return Rule::find()
             ->where(['disease_id' => $this->id])
             ->select('symptom_code')
